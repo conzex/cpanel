@@ -14,8 +14,9 @@ Automated installer script for setting up **CloudPanel** with **Conzex Global br
 ---
 
 ## 📦 What This Script Does
-
-- ✅ Installs official **CloudPanel v2**
+- ✅ IPv6 disabled (sysctl commands added)
+- ✅ Hostname changed to Prod-cPanel
+- ✅ Installs official **Conzex | cPanel v2**
 - ✅ Applies **Conzex branding** (logo, favicon, footer links)
 - ✅ Extends disk if `/dev/sdb` is available
 - ✅ Cleans logs, cache, and junk
