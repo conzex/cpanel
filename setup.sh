@@ -3,7 +3,7 @@
 set -e
 
 echo "====================================="
-echo "🚀 Starting CloudPanel + Conzex Setup"
+echo "🚀 Starting Conzex - cPanel Setup"
 echo "====================================="
 
 # 1. Basic system update
