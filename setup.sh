@@ -20,23 +20,21 @@ hostnamectl set-hostname Prod-cPanel
 echo "🔄 Updating system..."
 apt update && apt -y upgrade && apt -y install curl wget sudo lvm2 gnupg
 
-# 2. Extend disk before CloudPanel installation
-echo "💽 Checking for free space and extending root volume if needed..."
-ROOT_LV=$(lsblk -o NAME,MOUNTPOINT | grep ' /$' | awk '{print $1}')
+# 2. Ensure root volume is at least 25GB
+echo "📏 Checking if root volume needs to be extended to 25GB..."
+ROOT_LV="/dev/mapper/ubuntu--vg-ubuntu--lv"
+CURRENT_SIZE=$(df -BG / | tail -1 | awk '{print $2}' | sed 's/G//')
 VG_NAME=$(vgdisplay | grep 'VG Name' | awk '{print $3}')
 
-if [ -n "$VG_NAME" ] && [ -n "$ROOT_LV" ]; then
-  FREE_PE=$(vgdisplay "$VG_NAME" | awk '/Free  PE/ {print $5}')
-  if [ "$FREE_PE" -gt 0 ]; then
-    echo "📏 Extending root logical volume using $FREE_PE free PEs..."
-    lvextend -l +"$FREE_PE" "/dev/$VG_NAME/$ROOT_LV" -r
-  else
-    echo "⚠️ No free space in VG. Skipping disk extension."
-  fi
+if [ "$CURRENT_SIZE" -lt 25 ]; then
+  echo "🔧 Current root size is ${CURRENT_SIZE}GB. Extending to 25GB..."
+  lvextend -L25G "$ROOT_LV"
+  resize2fs "$ROOT_LV"
 else
-  echo "❌ Could not determine VG or LV name. Disk extension skipped."
+  echo "✅ Root volume is already ${CURRENT_SIZE}GB. No extension needed."
 fi
 
+# 3. Check free space (minimum 6GB required)
 FREE_SPACE=$(df -BG / | tail -1 | awk '{print $4}' | sed 's/G//')
 if [ "$FREE_SPACE" -lt 6 ]; then
   echo "❌ Not enough free disk space on root (only ${FREE_SPACE}GB available)."
@@ -44,13 +42,13 @@ if [ "$FREE_SPACE" -lt 6 ]; then
   exit 1
 fi
 
-# 3. Install CloudPanel
+# 4. Install CloudPanel
 echo "📦 Installing CloudPanel..."
 curl -sS https://installer.cloudpanel.io/ce/v2/install.sh -o install.sh
 echo "a3ba69a8102345127b4ae0e28cfe89daca675cbc63cd39225133cdd2fa02ad36 install.sh" | sha256sum -c
 sudo bash install.sh
 
-# 4. Extend disk space if /dev/sdb exists
+# 5. Extend disk space if /dev/sdb exists
 if lsblk | grep -q 'sdb'; then
   echo "💽 Extending disk space using /dev/sdb..."
   pvcreate /dev/sdb
@@ -59,13 +57,13 @@ if lsblk | grep -q 'sdb'; then
   resize2fs /dev/ubuntu-vg/ubuntu-lv
 fi
 
-# 5. Clean system logs & cache
+# 6. Clean system logs & cache
 echo "🧹 Cleaning disk space..."
 apt clean
 rm -rf /var/log/* /var/cache/*
 journalctl --vacuum-time=1d
 
-# 6. Custom MOTD
+# 7. Custom MOTD
 echo "🛠️ Setting custom MOTD..."
 chmod -x /etc/update-motd.d/10-cloudpanel
 cat <<'EOF' > /etc/update-motd.d/10-help-text
@@ -86,7 +84,7 @@ EOM
 EOF
 chmod +x /etc/update-motd.d/10-help-text
 
-# 7. Replace branding assets
+# 8. Replace branding assets
 echo "🎨 Replacing logos and favicons..."
 sudo curl -o /home/clp/htdocs/app/files/public/assets/images/logo.svg https://cdn.conzex.com/media/image/cz-light.svg
 sudo curl -o /home/clp/htdocs/app/files/public/assets/images/logo-dark.svg https://cdn.conzex.com/media/image/cz-dark.svg
@@ -94,12 +92,12 @@ sudo curl -o /home/clp/htdocs/app/files/public/favicon.ico https://cdn.conzex.co
 sudo curl -o /home/clp/htdocs/app/files/public/assets/images/cloudpanel-cloud.svg https://cdn.conzex.com/media/image/cz-light.svg
 sudo curl -o /home/clp/htdocs/app/files/public/assets/images/favicon.svg https://cdn.conzex.com/media/image/app-logo.svg
 
-# 8. Ensure nginx log dir exists
+# 9. Ensure nginx log dir exists
 mkdir -p /var/log/nginx
 touch /var/log/nginx/error.log
 chown -R www-data:www-data /var/log/nginx
 
-# 9. Inject footer into Twig templates
+# 10. Inject footer into Twig templates
 echo "🦶 Adding footer links..."
 find /home/clp/htdocs/app/files/templates/ -type f -name "*.twig" \
   -exec grep -Iq . {} \; -print | \
@@ -113,7 +111,7 @@ xargs -I {} sed -i '/footer-container/a \
   © $(date +%Y) <a target="_blank" href="https://www.conzex.com/">Conzex Global Private Limited</a>\
 </div>' {}
 
-# 10. Final cleanup & restart services
+# 11. Final cleanup & restart services
 echo "🔁 Restarting services..."
 rm -rf /home/clp/htdocs/app/files/var/cache/*
 systemctl restart php8.1-fpm
