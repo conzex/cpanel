@@ -20,9 +20,9 @@ hostnamectl set-hostname Prod-cPanel
 echo "🔄 Updating system..."
 apt update && apt -y upgrade && apt -y install curl wget sudo lvm2 gnupg
 
-# 2. Force extend root volume to 25GB
-echo "📏 Extending root volume to 25GB..."
-lvextend -L25G /dev/mapper/ubuntu--vg-ubuntu--lv -y
+# 2. Force extend root volume to 20GB
+echo "📏 Extending root volume to 20GB..."
+lvextend -L20G /dev/mapper/ubuntu--vg-ubuntu--lv -y
 resize2fs /dev/mapper/ubuntu--vg-ubuntu--lv
 
 # 3. Install CloudPanel
