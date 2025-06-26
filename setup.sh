@@ -6,6 +6,16 @@ echo "====================================="
 echo "🚀 Starting Conzex - cPanel Setup"
 echo "====================================="
 
+# 0. Disable IPv6
+echo "📛 Disabling IPv6..."
+sudo sysctl -w net.ipv6.conf.all.disable_ipv6=1
+sudo sysctl -w net.ipv6.conf.default.disable_ipv6=1
+sudo sysctl -w net.ipv6.conf.lo.disable_ipv6=1
+
+# Set hostname
+echo "🖥️ Setting hostname to 'Prod-cPanel'..."
+hostnamectl set-hostname Prod-cPanel
+
 # 1. Basic system update
 echo "🔄 Updating system..."
 apt update && apt -y upgrade && apt -y install curl wget sudo lvm2 gnupg
